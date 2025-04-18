@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Processing Login...</title>
+</head>
+<body>
+    <p>Processing login, please wait...</p>
+    <script>
+        console.log('[Implicit Callback Page]');
+        console.log('Full URL:', window.location.href);
+        console.log('Hash:', window.location.hash);
+        
+        // Extract the token from URL fragment
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        
+        console.log('Parsed Hash Params:', Object.fromEntries(params.entries()));
+        
+        const access_token = params.get('access_token');
+        const state = params.get('state');
+        
+        console.log('Access Token:', access_token);
+        console.log('State:', state);
+        
+        if (access_token && state) {
+            console.log('Sending token to server...');
+            // Send token to server
+            fetch('/auth/implicit/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    access_token,
+                    state
+                })
+            })
+            .then(response => {
+                console.log('Server Response:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Server Data:', data);
+                if (data.success) {
+                    console.log('Success! Redirecting to profile...');
+                    window.location.href = '/profile';
+                } else {
+                    console.log('Error! Redirecting to login...');
+                    window.location.href = '/login';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                window.location.href = '/login';
+            });
+        } else {
+            console.log('No token or state found, redirecting to login...');
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html> 

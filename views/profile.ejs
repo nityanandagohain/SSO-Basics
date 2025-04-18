@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - OAuth Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .profile-info {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .auth-button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .auth-button:hover {
+            background-color: #45a049;
+        }
+        .flow-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            background-color: #2196F3;
+            color: white;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Your Profile <span class="flow-badge"><%= user.flowType === 'authorization_code' ? 'Authorization Code Flow' : 'Implicit Flow' %></span></h1>
+    
+    <div class="profile-info">
+        <h2>Authentication Details</h2>
+        <p><strong>Access Token:</strong> <%= user.accessToken %></p>
+        <p><strong>Refresh Token:</strong> <%= user.refreshToken %></p>
+        <p><strong>Profile:</strong> <%= JSON.stringify(user.profile) %></p>
+    </div>
+
+    <a href="/" class="auth-button">Back to Home</a>
+    <a href="/logout" class="auth-button">Logout</a>
+</body>
+</html> 
