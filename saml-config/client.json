@@ -10,6 +10,7 @@
     "alwaysDisplayInConsole": false,
     "clientAuthenticatorType": "client-secret",
     "redirectUris": [
+      "http://localhost:3000/*",
       "http://localhost:3000/auth/saml/callback"
     ],
     "webOrigins": [
@@ -26,19 +27,30 @@
     "frontchannelLogout": true,
     "protocol": "saml",
     "attributes": {
+      "saml.assertion.signature": "false",
+      "saml_idp_initiated_sso_relay_state": "http://localhost:3000/auth/saml/idp-initiated",
       "saml.force.post.binding": "true",
+      "saml.encrypt": "false",
       "saml.server.signature": "true",
+      "saml_idp_initiated_sso_url_name": "idp-initiated",
+      "saml.server.signature.keyinfo.ext": "false",
       "saml.signing.certificate": "MIICmzCCAYMCBgGWWRgRbDANBgkqhkiG9w0BAQsFADARMQ8wDQYDVQQDDAZteXNhbWwwHhcNMjUwNDIxMTYwMjUxWhcNMzUwNDIxMTYwNDMxWjARMQ8wDQYDVQQDDAZteXNhbWwwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCsStYjSWsnBpLCb2VYl+b/07W6EJhcLBvbotR6tj5htCFXH211RgNkbCgcxZR/SsB8xikL0S968KYu3P/xDag0CklLmolzBp1mtq6/8H7ftcNzdhztgArkN5ZS+ho3VOoiVtpubvhO9SgdhQMZDvtMnrbTbIj380AJe9AGJdB5mVib++8iMwalBoF50X+SutiCqdpxGMnIi4T4a3BRERLnbNiKC0qFBTyyBfOztyMkv7Ly61a8tapuYcgyuHbRjgRCzb2UsIvWMTvLVHYe1go5bVihy24Qs3KfruntkSEaC16en2JVrnhkTKCw3mS2t/a/vEAKssoq5naXE6gohoc1AgMBAAEwDQYJKoZIhvcNAQELBQADggEBAEcSNZAtXTDoB0dCFsyD4F9bwxcu0i3+x0NIuhfuPc2oUk5nP6GCv2msiAFeZnQnTnhjzlQJw8RCoJb6oLFCPvlHkIa+ZKQ992DmiQcyRBKTo0Q8sxOF47GEV2sGKIhG7SQZMLE0UZOh5xpg72stVNJbsvqCEZcfzab6Ac7SwahgWGDjWOKsGVSzpPai+JzHgUrlc2abpO+v9q0NnwDqOF9vxMZSXiQNqykhwjcGzLZcT0zT2pFrbaMBdrsDtFEr/nK+5F/ad5opfJ7BZCx/UjV5QSp99zk7HYt+rt+QK9m9FndbFPq1M4jXoOE8rXWYVqe2EXQQK1HTH++oVyMTrxw=",
       "realm_client": "false",
       "saml.artifact.binding.identifier": "QLmMpUr/6lWlrWZbeQffqiDW2j8=",
+      "saml.artifact.binding": "false",
       "saml.signature.algorithm": "RSA_SHA256",
       "saml_force_name_id_format": "false",
-      "saml.client.signature": "true",
+      "saml.client.signature": "false",
       "saml.authnstatement": "true",
-      "saml_name_id_format": "username",
+      "display.on.consent.screen": "false",
       "saml.signing.private.key": "MIIEowIBAAKCAQEArErWI0lrJwaSwm9lWJfm/9O1uhCYXCwb26LUerY+YbQhVx9tdUYDZGwoHMWUf0rAfMYpC9EvevCmLtz/8Q2oNApJS5qJcwadZrauv/B+37XDc3Yc7YAK5DeWUvoaN1TqIlbabm74TvUoHYUDGQ77TJ6202yI9/NACXvQBiXQeZlYm/vvIjMGpQaBedF/krrYgqnacRjJyIuE+GtwURES52zYigtKhQU8sgXzs7cjJL+y8utWvLWqbmHIMrh20Y4EQs29lLCL1jE7y1R2HtYKOW1YoctuELNyn67p7ZEhGgtenp9iVa54ZEygsN5ktrf2v7xACrLKKuZ2lxOoKIaHNQIDAQABAoIBABLazbxm2HcY3Q6yKiEb3oe4n3aRQlsz6IiMtTwInaMLl2p1YgEnfE+NFoaviKS1hYMiHHPSnKOTmlwei1PR7spjJcpESy5vVuJas50FsJzCw3TrRBcpoAeBnc3O2PedL1I6twTG2B2r7ovsdn5TiWTFKbTRd9vKnwNqrUU+9iWYWFlGLaER9Yia2eQQg32WYxEB7kMJarjHvvnZzSbNfXy7SeCfQUAVqaZYz1OXvsrysGVszzPJezlbGSUux0LJO3sugmqJE7rDcl9HGjGZQL9K1GIGn1Zbm/eB4uWV8tumVeMZEDem3ZB90CAXKyRywfuK2KkL4rBODkwuWa886DECgYEA5UgjeuV7sxwKAUTdAPkFoUw5CAhj89ZOie3bCySk2ap6rX6yqf31Tbdy7Q1WUpBrRmvqKGbXXY6tDWAbjY3zPcq7uXudMBzpUseTp8vdcF1WmgXsHeUOAzZPz0dq+aszfOP3wHjKQrtB5um+Fw2zk8pzSdfhYTp1h0hMWMGIy3cCgYEAwF6bPd2kGed9xKLO0TGOW1tibW5JQvMmSaeXbUpPzO72Ny8ACcc1R4AgUOE8UkSbaGH7co/PxbSBGQu6BZ727bfSIy+nDVg4vDpiYKVfmkTChHfI/cC+VpmQa1ZOZsTlP3uVqrCFOBxJGPFFT2MhkbUBbEeAUl+jYpeSankslbMCgYApkqH0R6XdPQlHX6Ae7AgsTfDNVxAgh0woUDt2UsedO/8QdDebARQ4ajnpZ5CuWcdJtol3l+YW7abNFQ8J5KIlIxxUrmg68BMSUmOgeiOFmzb3qHk+lmirBm8EK3PnHzavv3oNqRkrbl6tqtYvwek8s+mhiwYvpfTneaF2Omk+UwKBgCVpAJW6abRj8XBxHPlPwth/YBfZ78NmV9bREcC+R+CZxCYdLMu6AuGByEcSVlHFZ9eX3nd8AjL3lHeTcTywmmLGccZH+Ru+QWJRlFopLvtoTc/HH75BYoKi4JQPN7YCqnZ7CTMlmvK7hXelTA5RP/D/G2S8Tvc2BCcjROUR5ZrDAoGBAJHh6eB0+P7kR34phhk5Ced7v8piNKl+/P84TTHpPC2x+0uO4iRwGGs0OWYGNys7a8c8GPzcAMHZZPPYfnT3zQWmppW6vCb2CFmE5hSzYBtXFSgHRAxXsFLZ98OJttnNROGD1aNeWYLhPcnQblk6HInTDtzfbhNRyBRghQciJs1N",
+      "saml_name_id_format": "persistent",
       "saml.allow.ecp.flow": "false",
-      "saml_signature_canonicalization_method": "http://www.w3.org/2001/10/xml-exc-c14n#"
+      "saml_signature_canonicalization_method": "http://www.w3.org/2001/10/xml-exc-c14n#",
+      "saml.onetimeuse.condition": "false",
+      "saml.server.signature.keyinfo.xmlSigKeyInfoKeyNameTransformer": "NONE",
+      "login_theme": "",
+      "consent.screen.text": ""
     },
     "authenticationFlowBindingOverrides": {},
     "fullScopeAllowed": true,

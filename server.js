@@ -68,14 +68,14 @@ passport.use(new SamlStrategy({
     issuer: 'mysaml',
     cert: cert,
     // Additional settings
-    authnRequestBinding: 'HTTP-POST',
-    wantAuthnRequestsSigned: false,
-    validateInResponseTo: false,
-    disableRequestedAuthnContext: true,
+    // authnRequestBinding: 'HTTP-POST',
+    // wantAuthnRequestsSigned: false,
+    // validateInResponseTo: false,
+    // disableRequestedAuthnContext: true,
     // Name ID format
-    identifierFormat: 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent',
+    // identifierFormat: 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
     // Enable IdP-initiated flow
-    allowUnsolicited: true
+    // allowUnsolicited: true
 }, (profile, done) => {
     console.log('SAML Profile:', profile);
     return done(null, profile);
@@ -272,20 +272,87 @@ app.get('/auth/saml',
     })
 );
 
-app.post('/auth/saml/idp-initiated',
+// Add IdP-initiated flow endpoint (GET)
+app.get('/auth/saml/idp-initiated',
     express.urlencoded({ extended: false }),
+    (req, res, next) => {
+        console.log('=== IdP-Initiated GET Request Details ===');
+        console.log('Request Method:', req.method);
+        console.log('Request URL:', req.url);
+        console.log('Request Headers:', req.headers);
+        console.log('Request Body:', req.body);
+        console.log('Request Query:', req.query);
+        console.log('Request Path:', req.path);
+        console.log('Request Original URL:', req.originalUrl);
+        console.log('Request Base URL:', req.baseUrl);
+        console.log('===================================');
+        next();
+    },
     passport.authenticate('saml', {
         failureRedirect: '/login',
         failureFlash: true
     }),
     (req, res) => {
-        console.log('IdP-Initiated SAML Response:', req.body);
-        console.log('IdP-Initiated SAML User:', req.user);
+        console.log('=== IdP-Initiated GET Authentication Success ===');
+        console.log('SAML Response:', req.body);
+        console.log('SAML User:', req.user);
+        console.log('==========================================');
+        
         req.session.user = {
             ...req.user,
             flowType: 'saml-idp-initiated'
         };
-        res.render('saml-profile', { user: req.session.user });
+        
+        // Check if there's a relay state
+        if (req.body.RelayState) {
+            console.log('Redirecting to relay state:', req.body.RelayState);
+            res.redirect(req.body.RelayState);
+        } else {
+            console.log('No relay state, rendering profile page');
+            res.render('saml-profile', { user: req.session.user });
+        }
+    }
+);
+
+// Add IdP-initiated flow endpoint (POST)
+app.post('/auth/saml/idp-initiated',
+    express.urlencoded({ extended: false }),
+    (req, res, next) => {
+        console.log('=== IdP-Initiated POST Request Details ===');
+        console.log('Request Method:', req.method);
+        console.log('Request URL:', req.url);
+        console.log('Request Headers:', req.headers);
+        console.log('Request Body:', req.body);
+        console.log('Request Query:', req.query);
+        console.log('Request Path:', req.path);
+        console.log('Request Original URL:', req.originalUrl);
+        console.log('Request Base URL:', req.baseUrl);
+        console.log('===================================');
+        next();
+    },
+    passport.authenticate('saml', {
+        failureRedirect: '/login',
+        failureFlash: true
+    }),
+    (req, res) => {
+        console.log('=== IdP-Initiated POST Authentication Success ===');
+        console.log('SAML Response:', req.body);
+        console.log('SAML User:', req.user);
+        console.log('==========================================');
+        
+        req.session.user = {
+            ...req.user,
+            flowType: 'saml-idp-initiated'
+        };
+        
+        // Check if there's a relay state
+        if (req.body.RelayState) {
+            console.log('Redirecting to relay state:', req.body.RelayState);
+            res.redirect(req.body.RelayState);
+        } else {
+            console.log('No relay state, rendering profile page');
+            res.render('saml-profile', { user: req.session.user });
+        }
     }
 );
 
