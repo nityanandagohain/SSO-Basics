@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAML Profile</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .profile-container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .profile-details {
+            background-color: white;
+            padding: 20px;
+            border-radius: 4px;
+        }
+        .detail-row {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="profile-header">
+            <h1>SAML Profile</h1>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+        
+        <div class="profile-details">
+            <% if (user) { %>
+                <% Object.entries(user).forEach(([key, value]) => { %>
+                    <div class="detail-row">
+                        <div class="detail-label"><%= key %></div>
+                        <% if (typeof value === 'object' && value !== null) { %>
+                            <div>
+                                <% Object.entries(value).forEach(([attrKey, attrValue]) => { %>
+                                    <div><strong><%= attrKey %>:</strong> <%= attrValue %></div>
+                                <% }); %>
+                            </div>
+                        <% } else { %>
+                            <div><%= value %></div>
+                        <% } %>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <p>No user data available</p>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html> 

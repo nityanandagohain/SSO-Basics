@@ -28,6 +28,12 @@
         .auth-button:hover {
             background-color: #45a049;
         }
+        .auth-button.saml {
+            background-color: #28a745;
+        }
+        .auth-button.saml:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -42,6 +48,7 @@
         <div class="auth-buttons">
             <a href="/auth/authorization-code" class="auth-button">Authorization Code Flow</a>
             <a href="/auth/implicit" class="auth-button">Implicit Flow</a>
+            <a href="/auth/saml" class="auth-button saml">SAML</a>
         </div>
     <% } %>
 </body>
