@@ -2,39 +2,17 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
-const axios = require('axios');
-const passport = require('passport');
-const SamlStrategy = require('passport-saml').Strategy;
 const fs = require('fs');
+const axios = require('axios');
+const xml2js = require('xml2js');
+const { DOMParser } = require('xmldom');
+const crypto = require('crypto');
+const xmlCrypto = require('xml-crypto');
+const zlib = require('zlib');
+const { promisify } = require('util');
 
 const app = express();
 
-// Read SAML IdP metadata
-const metadataXml = fs.readFileSync(path.join(__dirname, 'saml-config/metadata.xml'), 'utf8');
-
-// Extract certificate from metadata XML
-const certMatch = metadataXml.match(/<ds:X509Certificate>([^<]+)<\/ds:X509Certificate>/);
-const certValue = certMatch ? certMatch[1].trim() : null;
-
-// Helper function to format PEM string with proper line breaks
-function formatPem(pemString, type) {
-    const header = `-----BEGIN ${type}-----\n`;
-    const footer = `\n-----END ${type}-----`;
-    const body = pemString.replace(/\\n/g, '\n');
-    console.log(header + body + footer);
-    return header + body + footer;
-}
-
-// Format the certificate
-const cert = certValue ? formatPem(certValue, 'CERTIFICATE') : null;
-
-if (!cert) {
-    throw new Error('Failed to extract certificate from metadata.xml');
-}
-
-// Extract SSO URL from metadata
-const ssoUrlMatch = metadataXml.match(/SingleSignOnService[^>]+Location="([^"]+)"/);
-const ssoUrl = ssoUrlMatch ? ssoUrlMatch[1] : 'http://localhost:8080/realms/dev/protocol/saml';
 
 // View engine setup
 app.set('view engine', 'ejs');
@@ -56,53 +34,9 @@ app.use(session({
     name: 'oauth-session' // Custom session cookie name
 }));
 
-// Initialize passport
-app.use(passport.initialize());
-app.use(passport.session());
-
-// SAML Strategy Configuration
-passport.use(new SamlStrategy({
-    // Required settings
-    path: '/auth/saml/callback',
-    entryPoint: ssoUrl,
-    issuer: 'mysaml',
-    cert: cert,
-    // Additional settings
-    // authnRequestBinding: 'HTTP-POST',
-    // wantAuthnRequestsSigned: false,
-    // validateInResponseTo: false,
-    // disableRequestedAuthnContext: true,
-    // Name ID format
-    // identifierFormat: 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
-    // Enable IdP-initiated flow
-    // allowUnsolicited: true
-}, (profile, done) => {
-    console.log('SAML Profile:', profile);
-    return done(null, profile);
-}));
-
-// Serialize and deserialize user
-passport.serializeUser((user, done) => {
-    done(null, user);
-});
-
-passport.deserializeUser((user, done) => {
-    done(null, user);
-});
-
-// Add logging middleware
-// app.use((req, res, next) => {
-//     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-//     console.log('Query:', req.query);
-//     console.log('Body:', req.body);
-//     console.log('Session:', req.session);
-//     next();
-// });
-
 // Routes
 app.get('/', (req, res) => {
-    console.log('[Home Route]');
-    console.log('Session User:', req.session.user);
+    // console.log('Session User:', req.session.user);
     res.render('index', { user: req.session.user });
 });
 
@@ -139,7 +73,7 @@ app.get('/auth/callback', async (req, res) => {
         console.log('State mismatch!');
         console.log('Received:', state);
         console.log('Expected:', req.session.oauth2State);
-        return res.redirect('/login');
+        return res.redirect('/');
     }
 
     try {
@@ -171,7 +105,7 @@ app.get('/auth/callback', async (req, res) => {
         res.redirect('/profile');
     } catch (error) {
         console.error('Token exchange error:', error.response?.data || error.message);
-        res.redirect('/login');
+        res.redirect('/');
     }
 });
 
@@ -226,93 +160,142 @@ app.post('/auth/implicit/token', (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/profile', (req, res) => {
-    if (!req.session.user) {
-        console.log('No user found, redirecting to login');
-        return res.redirect('/login');
-    }
-    res.render('profile', { user: req.session.user });
-});
 
 
-app.get('/logout', (req, res) => {
-    console.log('[Logout Route]');
-    console.log('Destroying session for user:', req.session.user);
+// Read SAML IdP metadata
+const metadataXml = fs.readFileSync(path.join(__dirname, 'saml-config/metadata.xml'), 'utf8');
+
+// Extract certificate from metadata XML
+const certMatch = metadataXml.match(/<ds:X509Certificate>([^<]+)<\/ds:X509Certificate>/);
+const certValue = certMatch ? certMatch[1].trim() : null;
+
+// Helper function to format PEM string with proper line breaks
+function formatPem(pemString, type) {
+    const header = `-----BEGIN ${type}-----\n`;
+    const footer = `\n-----END ${type}-----`;
+    const body = pemString.replace(/\\n/g, '\n');
+    console.log(header + body + footer);
+    return header + body + footer;
+}
+
+// Format the certificate
+const cert = certValue ? formatPem(certValue, 'CERTIFICATE') : null;
+
+if (!cert) {
+    throw new Error('Failed to extract certificate from metadata.xml');
+}
+
+// Extract SSO URL from metadata
+const ssoUrlMatch = metadataXml.match(/SingleSignOnService[^>]+Location="([^"]+)"/);
+const ssoUrl = ssoUrlMatch ? ssoUrlMatch[1] : 'http://localhost:8080/realms/dev/protocol/saml';
+
+
+// SAML Routes
+app.get('/auth/saml', (req, res) => {
+    const samlRequest = `<?xml version="1.0"?>
+        <samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+            ID="_${crypto.randomBytes(20).toString('hex')}"
+            Version="2.0"
+            IssueInstant="${new Date().toISOString()}"
+            Destination="${ssoUrl}"
+            ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+            AssertionConsumerServiceURL="http://localhost:3000/auth/saml/callback">
+            <saml:Issuer xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">mysaml</saml:Issuer>
+            <samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent" AllowCreate="true"/>
+        </samlp:AuthnRequest>`;
     
-    // Clear all session data
-    req.session.destroy((err) => {
-        if (err) {
-            console.error('Error destroying session:', err);
-        }
-        // Clear any cookies
-        res.clearCookie('connect.sid');
-        // Redirect to home page
-        res.redirect('/');
+    const encodedRequest = Buffer.from(samlRequest).toString('base64');
+    
+    res.render('saml-redirect', {
+        url: ssoUrl,
+        samlRequest: encodedRequest,
+        relayState: req.query.RelayState || ''
     });
 });
 
-// Add middleware to check session
-app.use((req, res, next) => {
-    // If user is not logged in and trying to access protected routes
-    if (!req.session.user && 
-        (req.path.startsWith('/profile') || 
-         req.path.startsWith('/auth/callback') || 
-         req.path.startsWith('/auth/implicit/callback'))) {
-        console.log('Unauthorized access attempt to:', req.path);
-        return res.redirect('/login');
+// Helper function to validate SAML response
+async function validateSamlResponse(samlResponse) {
+    const parser = new DOMParser();
+    const inflated = await promisify(zlib.inflateRaw)(Buffer.from(samlResponse, 'base64'));
+    const xml = inflated.toString('utf8');
+    const doc = parser.parseFromString(xml);
+    
+    console.log('=== Raw SAML Response XML ===');
+    console.log(xml);
+    
+    const assertion = doc.getElementsByTagName('saml:Assertion')[0];
+    const subject = assertion.getElementsByTagName('saml:Subject')[0];
+    const nameID = subject.getElementsByTagName('saml:NameID')[0];
+    const attributes = assertion.getElementsByTagName('saml:AttributeStatement')[0];
+    
+    console.log('=== SAML Assertion Details ===');
+    console.log('NameID:', nameID ? nameID.textContent : 'Not found');
+    console.log('NameID Format:', nameID ? nameID.getAttribute('Format') : 'Not found');
+    console.log('NameID NameQualifier:', nameID ? nameID.getAttribute('NameQualifier') : 'Not found');
+    console.log('NameID SPNameQualifier:', nameID ? nameID.getAttribute('SPNameQualifier') : 'Not found');
+    console.log('Attribute Statement:', attributes ? attributes.toString() : 'Not found');
+    
+    const result = {
+        issuer: doc.getElementsByTagName('saml:Issuer')[0].textContent,
+        inResponseTo: doc.getElementsByTagName('samlp:Response')[0].getAttribute('InResponseTo'),
+        sessionIndex: assertion.getAttribute('ID'),
+        nameID: nameID ? nameID.textContent : null,
+        nameIDFormat: nameID ? nameID.getAttribute('Format') : null,
+        nameQualifier: nameID ? nameID.getAttribute('NameQualifier') : null,
+        spNameQualifier: nameID ? nameID.getAttribute('SPNameQualifier') : null,
+        attributes: {}
+    };
+    
+    if (attributes) {
+        console.log('=== Processing SAML Attributes ===');
+        Array.from(attributes.getElementsByTagName('saml:Attribute')).forEach(attr => {
+            const name = attr.getAttribute('Name');
+            const value = attr.getElementsByTagName('saml:AttributeValue')[0].textContent;
+            console.log(`Attribute found: ${name} = ${value}`);
+            result.attributes[name] = value;
+        });
     }
-    next();
-});
+    
+    // Add all attributes directly to the result object for easier access
+    Object.assign(result, result.attributes);
+    
+    console.log('=== Final SAML Result ===');
+    console.log(JSON.stringify(result, null, 2));
+    
+    return result;
+}
 
-// SAML Routes
-app.get('/auth/saml',
-    passport.authenticate('saml', {
-        failureRedirect: '/login',
-        failureFlash: true
-    })
-);
-
-// Add IdP-initiated flow endpoint (GET)
-app.get('/auth/saml/idp-initiated',
-    express.urlencoded({ extended: false }),
-    (req, res, next) => {
-        console.log('=== IdP-Initiated GET Request Details ===');
-        console.log('Request Method:', req.method);
-        console.log('Request URL:', req.url);
-        console.log('Request Headers:', req.headers);
+// SAML callback endpoint
+app.post('/auth/saml/callback', async (req, res) => {
+    try {
+        console.log('=== SAML Callback Request ===');
         console.log('Request Body:', req.body);
-        console.log('Request Query:', req.query);
-        console.log('Request Path:', req.path);
-        console.log('Request Original URL:', req.originalUrl);
-        console.log('Request Base URL:', req.baseUrl);
-        console.log('===================================');
-        next();
-    },
-    passport.authenticate('saml', {
-        failureRedirect: '/login',
-        failureFlash: true
-    }),
-    (req, res) => {
-        console.log('=== IdP-Initiated GET Authentication Success ===');
-        console.log('SAML Response:', req.body);
-        console.log('SAML User:', req.user);
-        console.log('==========================================');
+        
+        const { SAMLResponse } = req.body;
+        
+        if (!SAMLResponse) {
+            console.error('No SAMLResponse found in request');
+            return res.redirect('/');
+        }
+        
+        console.log('SAML Response:', SAMLResponse);
+        
+        const result = await validateSamlResponse(SAMLResponse);
+        
+        console.log('=== SAML Validation Success ===');
+        console.log('User Attributes:', result);
         
         req.session.user = {
-            ...req.user,
-            flowType: 'saml-idp-initiated'
+            ...result,
+            flowType: 'saml'
         };
         
-        // Check if there's a relay state
-        if (req.body.RelayState) {
-            console.log('Redirecting to relay state:', req.body.RelayState);
-            res.redirect(req.body.RelayState);
-        } else {
-            console.log('No relay state, rendering profile page');
-            res.render('saml-profile', { user: req.session.user });
-        }
+        res.redirect('/profile');
+    } catch (error) {
+        console.error('SAML Validation Error:', error);
+        res.redirect('/');
     }
-);
+});
 
 // Add IdP-initiated flow endpoint (POST)
 app.post('/auth/saml/idp-initiated',
@@ -330,54 +313,67 @@ app.post('/auth/saml/idp-initiated',
         console.log('===================================');
         next();
     },
-    passport.authenticate('saml', {
-        failureRedirect: '/login',
-        failureFlash: true
-    }),
-    (req, res) => {
-        console.log('=== IdP-Initiated POST Authentication Success ===');
-        console.log('SAML Response:', req.body);
-        console.log('SAML User:', req.user);
-        console.log('==========================================');
-        
-        req.session.user = {
-            ...req.user,
-            flowType: 'saml-idp-initiated'
-        };
-        
-        // Check if there's a relay state
-        if (req.body.RelayState) {
-            console.log('Redirecting to relay state:', req.body.RelayState);
-            res.redirect(req.body.RelayState);
-        } else {
-            console.log('No relay state, rendering profile page');
-            res.render('saml-profile', { user: req.session.user });
+    async (req, res) => {
+        try {
+            console.log('=== IdP-Initiated POST Authentication ===');
+            console.log('Request Body:', req.body);
+            
+            const samlResponse = req.body.SAMLResponse;
+            
+            if (!samlResponse) {
+                console.error('No SAMLResponse found in request');
+                return res.redirect('/');
+            }
+            
+            console.log('SAML Response:', samlResponse);
+            
+            const result = await validateSamlResponse(samlResponse);
+            
+            console.log('=== SAML Validation Success ===');
+            console.log('User Attributes:', result);
+            
+            req.session.user = {
+                ...result,
+                flowType: 'saml-idp-initiated'
+            };
+            
+            res.redirect('/profile');
+        } catch (error) {
+            console.error('IdP-Initiated POST Authentication Error:', error);
+            res.redirect('/');
         }
     }
 );
 
-app.post('/auth/saml/callback',
-    express.urlencoded({ extended: false }),
-    passport.authenticate('saml', {
-        failureRedirect: '/login',
-        failureFlash: true
-    }),
-    (req, res) => {
-        console.log('SAML Response:', req.body);
-        console.log('SAML User:', req.user);
-        req.session.user = {
-            ...req.user,
-            flowType: 'saml'
-        };
-        res.render('saml-profile', { user: req.session.user });
+// Profile route
+app.get('/profile', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/');
     }
-);
+    res.render('profile', { user: req.session.user });
+});
 
-// Add middleware to log SAML requests
+app.get('/logout', (req, res) => {
+    console.log('[Logout Route]');
+    console.log('Destroying session for user:', req.session.user);
+    
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Error destroying session:', err);
+        }
+        res.clearCookie('connect.sid');
+        res.redirect('/');
+    });
+});
+
+// Add middleware to check session
 app.use((req, res, next) => {
-    if (req.path === '/auth/saml/callback') {
-        console.log('SAML Callback Request Body:', req.body);
-        console.log('SAML Callback Request Headers:', req.headers);
+    if (!req.session.user && 
+        (req.path.startsWith('/profile') || 
+         req.path.startsWith('/auth/callback') || 
+         req.path.startsWith('/auth/implicit/callback'))) {
+        console.log('Unauthorized access attempt to:', req.path);
+        return res.redirect('/');
     }
     next();
 });

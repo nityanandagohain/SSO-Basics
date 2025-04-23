@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - OAuth Demo</title>
+    <title>Profile - Authentication Demo</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -40,16 +40,155 @@
             font-size: 0.9em;
             margin-left: 10px;
         }
+        .saml-badge {
+            background-color: #9C27B0;
+        }
+        .oauth-badge {
+            background-color: #2196F3;
+        }
+        .attribute-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .attribute-item {
+            margin: 10px 0;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 4px;
+            border-left: 4px solid #9C27B0;
+        }
+        .attribute-name {
+            font-weight: bold;
+            color: #333;
+            display: block;
+            margin-bottom: 5px;
+            text-transform: capitalize;
+        }
+        .attribute-value {
+            color: #666;
+            word-break: break-all;
+            display: block;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-radius: 3px;
+        }
+        .email-section {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        .section-title {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .saml-flow-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #9C27B0;
+        }
+        .attribute-description {
+            font-size: 0.8em;
+            color: #999;
+        }
     </style>
 </head>
 <body>
-    <h1>Your Profile <span class="flow-badge"><%= user.flowType === 'authorization_code' ? 'Authorization Code Flow' : 'Implicit Flow' %></span></h1>
+    <h1>Your Profile 
+        <span class="flow-badge <%= user.flowType.includes('saml') ? 'saml-badge' : 'oauth-badge' %>">
+            <%= user.flowType === 'authorization_code' ? 'Authorization Code Flow' : 
+                user.flowType === 'implicit' ? 'Implicit Flow' : 
+                user.flowType === 'saml' ? 'SAML SP-Initiated' : 
+                user.flowType === 'saml-idp-initiated' ? 'SAML IdP-Initiated' : 
+                'Unknown Flow' %>
+        </span>
+    </h1>
     
     <div class="profile-info">
-        <h2>Authentication Details</h2>
-        <p><strong>Access Token:</strong> <%= user.accessToken %></p>
-        <p><strong>Refresh Token:</strong> <%= user.refreshToken %></p>
-        <p><strong>Profile:</strong> <%= JSON.stringify(user.profile) %></p>
+        <h2 class="section-title">Authentication Details</h2>
+        
+        <% if (user.flowType.includes('saml')) { %>
+            <div class="saml-flow-details">
+                <h3 class="section-title">SAML Flow Details</h3>
+                <ul class="attribute-list">
+                    <% if (user.issuer) { %>
+                        <li class="attribute-item">
+                            <span class="attribute-name">Issuer</span>
+                            <span class="attribute-value"><%= user.issuer %></span>
+                        </li>
+                    <% } %>
+                    <% if (user.inResponseTo) { %>
+                        <li class="attribute-item">
+                            <span class="attribute-name">In Response To</span>
+                            <span class="attribute-value"><%= user.inResponseTo %></span>
+                        </li>
+                    <% } %>
+                    <% if (user.sessionIndex) { %>
+                        <li class="attribute-item">
+                            <span class="attribute-name">Session Index</span>
+                            <span class="attribute-value"><%= user.sessionIndex %></span>
+                        </li>
+                    <% } %>
+                    <% if (user.nameIDFormat) { %>
+                        <li class="attribute-item">
+                            <span class="attribute-name">Name ID Format</span>
+                            <span class="attribute-value"><%= user.nameIDFormat %></span>
+                        </li>
+                    <% } %>
+                    <% if (user.nameQualifier) { %>
+                        <li class="attribute-item">
+                            <span class="attribute-name">Name Qualifier</span>
+                            <span class="attribute-value"><%= user.nameQualifier %></span>
+                        </li>
+                    <% } %>
+                    <% if (user.spNameQualifier) { %>
+                        <li class="attribute-item">
+                            <span class="attribute-name">SP Name Qualifier</span>
+                            <span class="attribute-value"><%= user.spNameQualifier %></span>
+                        </li>
+                    <% } %>
+                </ul>
+            </div>
+
+            <h3 class="section-title">SAML Attributes</h3>
+            <ul class="attribute-list">
+                <div class="attribute-item">
+                    <div class="attribute-name">User ID</div>
+                    <div class="attribute-value"><%= user.nameID %></div>
+                    <div class="attribute-description">Persistent SAML Identifier</div>
+                </div>
+                <% if (user.email) { %>
+                <div class="attribute-item">
+                    <div class="attribute-name">Email</div>
+                    <div class="attribute-value"><%= user.email %></div>
+                    <div class="attribute-description">User's Email Address</div>
+                </div>
+                <% } %>
+                <% if (user.Role) { %>
+                    <li class="attribute-item">
+                        <span class="attribute-name">Role</span>
+                        <span class="attribute-value"><%= user.Role %></span>
+                    </li>
+                <% } %>
+                <% Object.entries(user).forEach(([key, value]) => { %>
+                    <% if (!['flowType', 'email', 'nameID', 'Role', 'issuer', 'inResponseTo', 'sessionIndex', 'nameIDFormat', 'nameQualifier', 'spNameQualifier'].includes(key)) { %>
+                        <li class="attribute-item">
+                            <span class="attribute-name"><%= key %></span>
+                            <span class="attribute-value"><%= value %></span>
+                        </li>
+                    <% } %>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p><strong>Access Token:</strong> <%= user.accessToken %></p>
+            <p><strong>Refresh Token:</strong> <%= user.refreshToken %></p>
+            <p><strong>Profile:</strong> <%= JSON.stringify(user.profile) %></p>
+        <% } %>
     </div>
 
     <a href="/" class="auth-button">Back to Home</a>

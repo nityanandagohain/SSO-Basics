@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SAML Redirect</title>
+</head>
+<body>
+    <form id="samlForm" action="<%= url %>" method="post">
+        <input type="hidden" name="SAMLRequest" value="<%= samlRequest %>" />
+        <input type="hidden" name="RelayState" value="<%= relayState %>" />
+    </form>
+    <script>
+        document.getElementById('samlForm').submit();
+    </script>
+</body>
+</html> 
