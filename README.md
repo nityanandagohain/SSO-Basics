@@ -1,25 +1,73 @@
-# OAuth and SAML Demo Server
+# OAuth and SAML Authentication Demo Server
 
-This is a Node.js server that demonstrates OAuth and SAML authentication flows.
+A comprehensive Node.js server demonstrating OAuth and SAML authentication flows with Keycloak integration.
 
-## Features
+## 🚀 Features
 
-- Implements both Implicit and Authorization Code OAuth flows
-- Implements SAML Service Provider functionality
-- Uses Passport.js for authentication
-- Simple and clean UI to demonstrate the flows
-- Session-based authentication
-- Profile page to view authentication details
+- **OAuth 2.0 Flows**
+  - Authorization Code Flow
+  - Implicit Flow
+  - Token Management
+  - Session Handling
 
-## Setup
+- **SAML 2.0 Integration**
+  - Service Provider (SP) Initiated Flow
+  - Identity Provider (IdP) Initiated Flow
+  - SAML Response Validation
+  - Attribute Mapping
 
-1. Install dependencies:
+
+## 🛠️ Prerequisites
+
+- Node.js (v14 or higher)
+- Docker and Docker Compose
+- Keycloak Server
+
+## ⚙️ Setup Instructions
+
+### 1. Keycloak Setup
+
+```bash
+# Start Keycloak using Docker Compose
+docker-compose up -d
+```
+
+1. Access Keycloak Admin Console:
+   - URL: `http://localhost:8080`
+   - Username: `admin`
+   - Password: `admin`
+
+2. Import Realm:
+   - Go to "Add Realm"
+   - Import `realm.json`
+
+3. Configure SAML Client:
+   - Navigate to Clients → Create
+   - Set Client ID to `mysaml`
+   - Set Client Protocol to `saml`
+   - Set Root URL to `http://localhost:3000`
+   - Set Valid Redirect URIs to `http://localhost:3000/*`
+   - Set Base URL to `http://localhost:3000`
+
+4. Generate Keys:
+   - Navigate to Clients → `signoz-standard` → Keys
+   - Click "Generate" to obtain the client secret for the authorization code flow.
+
+5. Update metadata.xml:
+   - Go to realm settings
+   - Click on `SAML 2.0 Identity Provider Metadata`
+   - Update the metadata from this section.
+
+### 2. Application Setup
+
+1. Install Dependencies:
 ```bash
 npm install
 ```
 
-2. Configure your environment variables in `.env`:
-```
+2. Configure Environment:
+```bash
+# Create .env file
 PORT=3000
 SESSION_SECRET=your_session_secret
 CLIENT_ID=your_client_id
@@ -28,77 +76,98 @@ CALLBACK_URL=http://localhost:3000/auth/callback
 IMPLICIT_CALLBACK_URL=http://localhost:3000/auth/implicit/callback
 ```
 
-## Keycloak SAML Configuration
+## 🔐 Keycloak SAML Configuration
 
 ### Critical Settings
-1. Client Settings:
-   - Client ID: `mysaml`
-   - Client Protocol: `saml`
-   - Root URL: `http://localhost:3000`
-   - Valid Redirect URIs: `http://localhost:3000/*`
-   - Base URL: `http://localhost:3000`
-   - IDP Initiated SSO URL Name: `mysaml`
-   - IDP Initiated SSO Relay State: `http://localhost:3000/auth/saml/idp-initiated`
-   - Assertion Consumer Service POST Binding URL: `http://localhost:3000/auth/saml/idp-initiated`
 
-2. Name ID Format Settings:
-   - Name ID Format: `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent` (default)
-   - To use email instead: Set to `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` and enable "Force Name ID Format"
+#### Client Configuration
+- **Client ID**: `mysaml`
+- **Client Protocol**: `saml`
+- **Root URL**: `http://localhost:3000`
+- **Valid Redirect URIs**: `http://localhost:3000/*`
+- **Base URL**: `http://localhost:3000`
+- **IDP Initiated SSO URL Name**: `mysaml`
+- **IDP Initiated SSO Relay State**: `http://localhost:3000/auth/saml/idp-initiated`
+- **Assertion Consumer Service POST Binding URL**: `http://localhost:3000/auth/saml/idp-initiated`
 
-3. SAML Capabilities:
-   - Client Signature Required: OFF
-   - Force POST Binding: ON
-   - Force Name ID Format: OFF (unless using email format)
-   - Include AuthnStatement: ON
-   - Sign Assertions: ON
+#### Name ID Format
+- **Default**: `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`
+- **Email Format**: `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`
+  - Enable "Force Name ID Format" when using email format
 
-### Common Issues and Solutions
+#### SAML Capabilities
+- ✅ Include AuthnStatement: ON
+- ✅ Sign Assertions: ON
+- ❌ Client Signature Required: OFF
+- ✅ Force POST Binding: ON
+- ❌ Force Name ID Format: OFF (unless using email format)
 
-1. Redirect Loop:
-   - Check Base URL matches your application URL
-   - Verify Assertion Consumer Service URL points to correct endpoint
-   - Ensure IDP Initiated SSO URL Name matches URL parameter
+## 🔄 Authentication Flows
 
-2. Invalid Token:
-   - Verify certificate format in metadata.xml
-   - Check clock skew settings
-   - Ensure proper signature validation settings
+### SAML Flows
+1. **SP-Initiated Flow**
+   - URL: `http://localhost:3000`
+   - Flow: User → SP → IdP → SP → Profile
 
-3. Missing Attributes:
-   - Add attribute mappers in Keycloak
-   - Check attribute names in SAML response
-   - Verify user profile has required attributes
-
-4. Name ID Format Issues:
-   - First login shows email, subsequent logins show persistent ID (default behavior)
-   - To always use email: Set Name ID Format to emailAddress and enable Force Name ID Format
-
-## Running the Server
-
-```bash
-node server.js
-```
-
-The server will start on port 3000 (or the port specified in your .env file).
-
-## Authentication Flows
+2. **IdP-Initiated Flow**
+   - URL: `http://localhost:8080/realms/dev/protocol/saml/clients/mysaml`
+   - Flow: User → IdP → SP → Profile
 
 ### OAuth Flows
-1. Authorization Code Flow
-2. Implicit Flow
+1. **Authorization Code Flow**
+   - URL: `http://localhost:3000/auth/authorization-code`
+   - Includes refresh token support
 
-### SAML Flow
-1. Service Provider (SP) Initiated Flow
-2. Identity Provider (IdP) Initiated Flow
+2. **Implicit Flow**
+   - URL: `http://localhost:3000/auth/implicit`
+   - Direct token issuance
 
-## Security Notes
+## 🚨 Troubleshooting Guide
 
-- Always use HTTPS in production
-- Keep your client secrets secure
+### Common Issues
+
+1. **Redirect Loop**
+   - Verify Base URL matches application URL
+   - Check Assertion Consumer Service URL
+   - Confirm IDP Initiated SSO URL Name
+
+2. **Invalid Token**
+   - Validate certificate format in metadata.xml
+   - Check clock skew settings
+   - Verify signature validation settings
+
+3. **Missing Attributes**
+   - Configure attribute mappers in Keycloak
+   - Verify attribute names in SAML response
+   - Check user profile attributes
+
+4. **Name ID Format Issues**
+   - First login: Email format
+   - Subsequent logins: Persistent ID
+   - To force email: Enable "Force Name ID Format"
+
+## 🔒 Security Best Practices
+
+- Use HTTPS in production
 - Implement proper session management
-- Use secure session secrets
-- Implement proper error handling
-- Regularly rotate certificates
+- Rotate certificates regularly
 - Monitor SAML response validation
 - Keep Keycloak and dependencies updated
+- Secure client secrets
+- Implement proper error handling
 
+## 🏃‍♂️ Running the Server
+
+```bash
+# Start the server
+node server.js
+
+# Server will be available at
+http://localhost:3000
+```
+
+## 📚 Additional Resources
+
+- [Keycloak Documentation](https://www.keycloak.org/documentation)
+- [SAML 2.0 Specification](http://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf)
+- [OAuth 2.0 Specification](https://tools.ietf.org/html/rfc6749)

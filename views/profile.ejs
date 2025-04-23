@@ -7,9 +7,22 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
             max-width: 800px;
             margin: 0 auto;
+            background-color: white;
             padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
         }
         .profile-info {
             background-color: #f5f5f5;
@@ -51,26 +64,22 @@
             padding: 0;
         }
         .attribute-item {
-            margin: 10px 0;
-            padding: 15px;
-            background-color: #fff;
-            border-radius: 4px;
-            border-left: 4px solid #9C27B0;
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 4px solid #6b46c1;
+            background-color: #f8f9fa;
         }
         .attribute-name {
             font-weight: bold;
-            color: #333;
-            display: block;
-            margin-bottom: 5px;
+            color: #4a5568;
             text-transform: capitalize;
         }
         .attribute-value {
-            color: #666;
-            word-break: break-all;
-            display: block;
+            color: #2d3748;
+            margin-top: 5px;
             padding: 5px;
-            background-color: #f8f9fa;
-            border-radius: 3px;
+            background-color: #edf2f7;
+            border-radius: 4px;
         }
         .email-section {
             background-color: #e3f2fd;
@@ -86,11 +95,22 @@
             border-bottom: 2px solid #e0e0e0;
         }
         .saml-flow-details {
-            background-color: #f8f9fa;
+            margin: 20px 0;
             padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            border-left: 4px solid #9C27B0;
+            background-color: #f0f9ff;
+            border: 1px solid #bee3f8;
+            border-radius: 6px;
+        }
+        .saml-flow-details h2 {
+            color: #2b6cb0;
+            margin-top: 0;
+        }
+        .saml-flow-details p {
+            margin: 5px 0;
+        }
+        .saml-flow-details .label {
+            font-weight: bold;
+            color: #4a5568;
         }
         .attribute-description {
             font-size: 0.8em;
@@ -99,95 +119,43 @@
     </style>
 </head>
 <body>
-    <h1>Your Profile 
-        <span class="flow-badge <%= user.flowType.includes('saml') ? 'saml-badge' : 'oauth-badge' %>">
-            <%= user.flowType === 'authorization_code' ? 'Authorization Code Flow' : 
-                user.flowType === 'implicit' ? 'Implicit Flow' : 
-                user.flowType === 'saml' ? 'SAML SP-Initiated' : 
-                user.flowType === 'saml-idp-initiated' ? 'SAML IdP-Initiated' : 
-                'Unknown Flow' %>
-        </span>
-    </h1>
-    
-    <div class="profile-info">
-        <h2 class="section-title">Authentication Details</h2>
+    <div class="container">
+        <h1>User Profile</h1>
         
-        <% if (user.flowType.includes('saml')) { %>
+        <% if (user.flowType === 'saml' || user.flowType === 'saml-idp-initiated') { %>
             <div class="saml-flow-details">
-                <h3 class="section-title">SAML Flow Details</h3>
-                <ul class="attribute-list">
-                    <% if (user.issuer) { %>
-                        <li class="attribute-item">
-                            <span class="attribute-name">Issuer</span>
-                            <span class="attribute-value"><%= user.issuer %></span>
-                        </li>
-                    <% } %>
-                    <% if (user.inResponseTo) { %>
-                        <li class="attribute-item">
-                            <span class="attribute-name">In Response To</span>
-                            <span class="attribute-value"><%= user.inResponseTo %></span>
-                        </li>
-                    <% } %>
-                    <% if (user.sessionIndex) { %>
-                        <li class="attribute-item">
-                            <span class="attribute-name">Session Index</span>
-                            <span class="attribute-value"><%= user.sessionIndex %></span>
-                        </li>
-                    <% } %>
-                    <% if (user.nameIDFormat) { %>
-                        <li class="attribute-item">
-                            <span class="attribute-name">Name ID Format</span>
-                            <span class="attribute-value"><%= user.nameIDFormat %></span>
-                        </li>
-                    <% } %>
-                    <% if (user.nameQualifier) { %>
-                        <li class="attribute-item">
-                            <span class="attribute-name">Name Qualifier</span>
-                            <span class="attribute-value"><%= user.nameQualifier %></span>
-                        </li>
-                    <% } %>
-                    <% if (user.spNameQualifier) { %>
-                        <li class="attribute-item">
-                            <span class="attribute-name">SP Name Qualifier</span>
-                            <span class="attribute-value"><%= user.spNameQualifier %></span>
-                        </li>
-                    <% } %>
-                </ul>
+                <h2>SAML Flow Details</h2>
+                <p><span class="label">Issuer:</span> <%= user.issuer %></p>
+                <p><span class="label">In Response To:</span> <%= user.inResponseTo || 'N/A' %></p>
+                <p><span class="label">Session Index:</span> <%= user.sessionIndex || 'N/A' %></p>
+                <p><span class="label">Name ID Format:</span> <%= user.nameID.format %></p>
+                <p><span class="label">Name Qualifier:</span> <%= user.nameID.nameQualifier || 'N/A' %></p>
+                <p><span class="label">SP Name Qualifier:</span> <%= user.nameID.spNameQualifier || 'N/A' %></p>
             </div>
 
-            <h3 class="section-title">SAML Attributes</h3>
-            <ul class="attribute-list">
+            <h2>SAML Attributes</h2>
+            <div class="attribute-item">
+                <div class="attribute-name">User ID</div>
+                <div class="attribute-value"><%= user.nameID.value %></div>
+            </div>
+            
+            <% Object.entries(user.attributes).forEach(([key, value]) => { %>
                 <div class="attribute-item">
-                    <div class="attribute-name">User ID</div>
-                    <div class="attribute-value"><%= user.nameID %></div>
-                    <div class="attribute-description">Persistent SAML Identifier</div>
+                    <div class="attribute-name"><%= key %></div>
+                    <div class="attribute-value"><%= value %></div>
                 </div>
-                <% if (user.email) { %>
-                <div class="attribute-item">
-                    <div class="attribute-name">Email</div>
-                    <div class="attribute-value"><%= user.email %></div>
-                    <div class="attribute-description">User's Email Address</div>
-                </div>
-                <% } %>
-                <% if (user.Role) { %>
-                    <li class="attribute-item">
-                        <span class="attribute-name">Role</span>
-                        <span class="attribute-value"><%= user.Role %></span>
-                    </li>
-                <% } %>
-                <% Object.entries(user).forEach(([key, value]) => { %>
-                    <% if (!['flowType', 'email', 'nameID', 'Role', 'issuer', 'inResponseTo', 'sessionIndex', 'nameIDFormat', 'nameQualifier', 'spNameQualifier'].includes(key)) { %>
-                        <li class="attribute-item">
-                            <span class="attribute-name"><%= key %></span>
-                            <span class="attribute-value"><%= value %></span>
-                        </li>
-                    <% } %>
-                <% }); %>
-            </ul>
+            <% }); %>
         <% } else { %>
-            <p><strong>Access Token:</strong> <%= user.accessToken %></p>
-            <p><strong>Refresh Token:</strong> <%= user.refreshToken %></p>
-            <p><strong>Profile:</strong> <%= JSON.stringify(user.profile) %></p>
+            <div class="attribute-item">
+                <div class="attribute-name">Access Token</div>
+                <div class="attribute-value"><%= user.accessToken %></div>
+            </div>
+            <% if (user.refreshToken) { %>
+                <div class="attribute-item">
+                    <div class="attribute-name">Refresh Token</div>
+                    <div class="attribute-value"><%= user.refreshToken %></div>
+                </div>
+            <% } %>
         <% } %>
     </div>
 

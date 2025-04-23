@@ -215,54 +215,73 @@ app.get('/auth/saml', (req, res) => {
 
 // Helper function to validate SAML response
 async function validateSamlResponse(samlResponse) {
-    const parser = new DOMParser();
-    const inflated = await promisify(zlib.inflateRaw)(Buffer.from(samlResponse, 'base64'));
-    const xml = inflated.toString('utf8');
-    const doc = parser.parseFromString(xml);
-    
-    console.log('=== Raw SAML Response XML ===');
-    console.log(xml);
-    
-    const assertion = doc.getElementsByTagName('saml:Assertion')[0];
-    const subject = assertion.getElementsByTagName('saml:Subject')[0];
-    const nameID = subject.getElementsByTagName('saml:NameID')[0];
-    const attributes = assertion.getElementsByTagName('saml:AttributeStatement')[0];
-    
-    console.log('=== SAML Assertion Details ===');
-    console.log('NameID:', nameID ? nameID.textContent : 'Not found');
-    console.log('NameID Format:', nameID ? nameID.getAttribute('Format') : 'Not found');
-    console.log('NameID NameQualifier:', nameID ? nameID.getAttribute('NameQualifier') : 'Not found');
-    console.log('NameID SPNameQualifier:', nameID ? nameID.getAttribute('SPNameQualifier') : 'Not found');
-    console.log('Attribute Statement:', attributes ? attributes.toString() : 'Not found');
-    
-    const result = {
-        issuer: doc.getElementsByTagName('saml:Issuer')[0].textContent,
-        inResponseTo: doc.getElementsByTagName('samlp:Response')[0].getAttribute('InResponseTo'),
-        sessionIndex: assertion.getAttribute('ID'),
-        nameID: nameID ? nameID.textContent : null,
-        nameIDFormat: nameID ? nameID.getAttribute('Format') : null,
-        nameQualifier: nameID ? nameID.getAttribute('NameQualifier') : null,
-        spNameQualifier: nameID ? nameID.getAttribute('SPNameQualifier') : null,
-        attributes: {}
-    };
-    
-    if (attributes) {
-        console.log('=== Processing SAML Attributes ===');
-        Array.from(attributes.getElementsByTagName('saml:Attribute')).forEach(attr => {
-            const name = attr.getAttribute('Name');
-            const value = attr.getElementsByTagName('saml:AttributeValue')[0].textContent;
-            console.log(`Attribute found: ${name} = ${value}`);
-            result.attributes[name] = value;
-        });
+    try {
+        // Decode base64 and decompress if needed
+        const decodedResponse = Buffer.from(samlResponse, 'base64');
+        let inflatedResponse;
+        
+        // Check if the response is compressed (starts with 0x78)
+        if (decodedResponse[0] === 0x78) {
+            try {
+                inflatedResponse = await promisify(zlib.inflateRaw)(decodedResponse);
+            } catch (error) {
+                // If decompression fails, use the decoded response as-is
+                inflatedResponse = decodedResponse;
+            }
+        } else {
+            inflatedResponse = decodedResponse;
+        }
+
+        // Parse the XML
+        const xmlDoc = new DOMParser().parseFromString(inflatedResponse.toString('utf8'), 'text/xml');
+        
+        // Get the assertion
+        const assertion = xmlDoc.getElementsByTagNameNS('urn:oasis:names:tc:SAML:2.0:assertion', 'Assertion')[0];
+        if (!assertion) {
+            throw new Error('No SAML assertion found in response');
+        }
+
+        // Get the NameID
+        const nameID = assertion.getElementsByTagNameNS('urn:oasis:names:tc:SAML:2.0:assertion', 'NameID')[0];
+        if (!nameID) {
+            throw new Error('No NameID found in assertion');
+        }
+
+        // Get the attribute statement
+        const attributeStatement = assertion.getElementsByTagNameNS('urn:oasis:names:tc:SAML:2.0:assertion', 'AttributeStatement')[0];
+        if (!attributeStatement) {
+            throw new Error('No attribute statement found in assertion');
+        }
+
+        // Process attributes
+        const attributes = {};
+        const attributeNodes = attributeStatement.getElementsByTagNameNS('urn:oasis:names:tc:SAML:2.0:assertion', 'Attribute');
+        for (let i = 0; i < attributeNodes.length; i++) {
+            const attribute = attributeNodes[i];
+            const name = attribute.getAttribute('Name');
+            const values = attribute.getElementsByTagNameNS('urn:oasis:names:tc:SAML:2.0:assertion', 'AttributeValue');
+            if (values.length > 0) {
+                attributes[name] = values[0].textContent;
+            }
+        }
+
+        // Construct the result
+        return {
+            issuer: assertion.getElementsByTagNameNS('urn:oasis:names:tc:SAML:2.0:assertion', 'Issuer')[0].textContent,
+            inResponseTo: assertion.getAttribute('InResponseTo'),
+            sessionIndex: assertion.getAttribute('SessionIndex'),
+            nameID: {
+                format: nameID.getAttribute('Format'),
+                nameQualifier: nameID.getAttribute('NameQualifier'),
+                spNameQualifier: nameID.getAttribute('SPNameQualifier'),
+                value: nameID.textContent
+            },
+            attributes: attributes
+        };
+    } catch (error) {
+        console.error('SAML Validation Error:', error);
+        throw error;
     }
-    
-    // Add all attributes directly to the result object for easier access
-    Object.assign(result, result.attributes);
-    
-    console.log('=== Final SAML Result ===');
-    console.log(JSON.stringify(result, null, 2));
-    
-    return result;
 }
 
 // SAML callback endpoint
